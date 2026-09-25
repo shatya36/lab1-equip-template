@@ -77,3 +77,10 @@ def total_power(player):
         if item:
             power += item.power
     return power
+
+Sword = Item(name = "Sword" , slot = "left_hand" , power = 0 , durability = 100 , level_req = 1 , two_handed = False)
+Player = Player(name = "Lord" , level=4 , inventory = [Sword] , capacity = 4)
+print(Player.inventory)
+equip(Player,Sword)
+unequip(Player,"left_hand")
+print(Player.inventory)
