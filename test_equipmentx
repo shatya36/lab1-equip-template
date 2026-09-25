@@ -1,0 +1,98 @@
+from equipment import Item, Player, equip, unequip, total_power
+# Сколько вещей всего есть у игрока
+def count_items(player):
+    count = len(player.inventory)
+
+    for item in player.slots.values():
+        if item is not None:
+            count += 1
+    return count
+
+#Обычная вещь перемещается из инвентаря в слот
+def test_equip_item():
+    sword = Item("Sword", "right_hand", power=10)
+    player = Player("Player", level=5, inventory=[sword])
+
+    before = count_items(player)
+
+    assert equip(player, sword) is True
+    assert sword not in player.inventory
+    assert player.slots["right_hand"] is sword
+    after = count_items(player)
+    assert before == after
+    
+#При занятом слоте старая вещь возвращается в инвентарь
+def test_replace_item():
+    old_sword = Item("Old Sword", "right_hand", power=5)
+    new_sword = Item("New Sword", "right_hand", power=10)
+    player = Player("Player",level=5,inventory=[new_sword],capacity=5)
+    player.slots["right_hand"] = old_sword
+    before = count_items(player)
+
+    assert equip(player, new_sword) is True
+    assert player.slots["right_hand"] is new_sword
+    assert new_sword not in player.inventory
+    assert old_sword in player.inventory
+    after = count_items(player)
+    assert before == after
+
+#Двуручник освобождает обе руки и занимает правую
+def test_equip_two_handed():
+    sword = Item("Sword", "right_hand", power=10)
+    shield = Item("Shield", "left_hand", power=5)
+    bow = Item("Bow","right_hand",power=20,two_handed=True)
+    player = Player("Player",level=5,inventory=[bow],capacity=5)
+    player.slots["right_hand"] = sword
+    player.slots["left_hand"] = shield
+    before = count_items(player)
+
+    assert equip(player, bow) is True
+    assert bow not in player.inventory
+    assert player.slots["right_hand"] is bow
+    assert player.slots["left_hand"] is None
+    assert sword in player.inventory
+    assert shield in player.inventory
+    after = count_items(player)
+    assert before == after
+    
+#Двуручник не надевается, если старые вещи некуда вернуть
+def test_two_handed_weapon_fit():
+    sword = Item("Sword", "right_hand", power=10)
+    shield = Item("Shield", "left_hand", power=5)
+    bow = Item("Bow", "right_hand", power=20, two_handed=True)
+    item1 = Item("Item 1", "head")
+    item2 = Item("Item 2", "body")
+    item3 = Item("Item 3", "ring_1")
+    player = Player("Player",level=5,inventory=[item1, item2, item3, bow],capacity=4)
+    player.slots["right_hand"] = sword
+    player.slots["left_hand"] = shield
+    before = count_items(player)
+
+    assert equip(player, bow) is False
+    assert bow in player.inventory
+    assert player.slots["right_hand"] is sword
+    assert player.slots["left_hand"] is shield
+    after = count_items(player)
+    assert before == after
+    
+#Сломанная вещь остаётся надетой, но даёт 0 силы
+def test_broken_item():
+    sword = Item("Broken Sword","right_hand",power=100,durability=0)
+    player = Player("Player", inventory=[])
+    player.slots["right_hand"] = sword
+
+    assert player.slots["right_hand"] is sword
+    assert total_power(player) == 0
+
+#После equip и unequip количество вещей не увеличивается
+def test_duplicate_item():
+    sword = Item("Sword", "right_hand", power=10)
+    player = Player("Player", inventory=[sword])
+    before = count_items(player)
+
+    assert equip(player, sword) is True
+    assert unequip(player, "right_hand") is True
+    assert len(player.inventory) == 1
+    assert player.inventory[0] is sword
+    after = count_items(player)
+    assert before == after
