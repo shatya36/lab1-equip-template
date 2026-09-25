@@ -41,16 +41,95 @@ class Player:
         return f"<{self.name} lvl={self.level} inv={len(self.inventory)}>"
 
 
-def equip(player, item):
+def equip(player, item) -> bool:
     """Надеть вещь из инвентаря. True — надели, False — не смогли."""
-    raise NotImplementedError
 
+    if item.slot not in SLOTS:
+        return False
 
-def unequip(player, slot):
+    if player.level < item.level_req:
+        return False
+
+    if item not in player.inventory:
+        return False
+    #двуручка
+    if item.two_handed:
+        active_items = []
+        for hand in HANDS:
+            if player.slots[hand] is not None:
+                active_items.append(player.slots[hand])
+
+        if len(player.inventory) - 1 + len(active_items) > player.capacity:
+            return False
+
+        for old_item in active_items:
+            player.inventory.append(old_item)
+
+        player.slots["right_hand"] = item
+        player.inventory.remove(item)
+        player.slots["left_hand"] = None
+        return True
+
+    #соло амо
+    active_items = []
+    if item.slot in HANDS:
+        for hand in HANDS:
+            if (player.slots[hand] is not None) and (player.slots[hand].two_handed):
+                active_items.append(player.slots[hand])
+                break
+
+        if len(active_items) == 0:
+            if player.slots[item.slot] is not None:
+                active_items.append(player.slots[item.slot])
+
+    else:
+        if player.slots[item.slot] is not None:
+            active_items.append(player.slots[item.slot])
+
+    if len(player.inventory) - 1 + len(active_items) > player.capacity:
+        return False
+
+    player.inventory.remove(item)
+
+    for old_item in active_items:
+        player.inventory.append(old_item)
+
+    for old_item in active_items:
+        if old_item.two_handed:
+            player.slots["right_hand"] = None
+            player.slots["left_hand"] = None
+
+    player.slots[item.slot] = item
+    return True
+
+def unequip(player, slot) -> bool:
     """Снять вещь из слота в инвентарь. True — сняли, False — слот пуст."""
-    raise NotImplementedError
 
+    if slot not in SLOTS:
+        return False
 
-def total_power(player):
+    item = player.slots[slot]
+    if item is None:
+        return False
+
+    if len(player.inventory) >= player.capacity:
+        return False
+
+    player.inventory.append(item)
+    if item.two_handed:
+        player.slots["right_hand"] = None
+        player.slots["left_hand"] = None
+    else:
+        player.slots[slot] = None
+    return True
+
+def total_power(player) -> int:
     """Сила всех надетых вещей. Сломанная вещь даёт 0."""
-    raise NotImplementedError
+    sum_power = 0
+    for active_item in player.slots.values():
+        if (active_item is not None) and active_item.durability >0:
+            sum_power += active_item.power
+        elif (active_item is not None) and active_item.durability ==0:
+            sum_power += 0
+        else: continue
+    return sum_power
